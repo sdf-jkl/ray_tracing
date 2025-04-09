@@ -1,50 +1,7 @@
 use image::{Rgb, RgbImage};
+use ray_tracing::{Vector, Sphere, intersection_test};
 
 fn main() {
-
-    pub struct Vector(f32, f32, f32);
-
-    // Implemeting functions for the Vector struct
-    impl Vector{
-        pub fn sub(&self, vector:&Vector) -> Vector{
-            Vector(
-                self.0 - vector.0,
-                self.1 - vector.1,
-                self.2 - vector.2
-            )
-        }
-
-        pub fn add(&self, vector:&Vector) -> Vector{
-            Vector(
-                self.0 + vector.0,
-                self.1 + vector.1,
-                self.2 + vector.2
-            )
-        }
-
-        pub fn scale(&self, scalar: f32) -> Vector{
-            Vector(
-                self.0 * scalar,
-                self.1 * scalar, 
-                self.2 * scalar)
-        }
-
-        pub fn lerp(&self, vector:&Vector, alpha: f32) -> Vector{
-            self.scale(1.0-alpha).add(&vector.scale(alpha))
-        }
-
-        pub fn to_rgb(&self) -> [u8; 3] {
-            [
-                ((self.0.clamp(-1.0, 1.0) * 0.5 + 0.5) * 255.0) as u8,
-                ((self.1.clamp(-1.0, 1.0) * 0.5 + 0.5) * 255.0) as u8,
-                // ((self.2.clamp(-1.0, 1.0) * 0.5 + 0.5) * 255.0) as u8,
-                127
-            ]
-        }
-
-
-    }
-
     // Image plain corners vectors
     let x1 = Vector(1.0, 0.75, 0.0); //Top right
     let x2 = Vector(-1.0, 0.75, 0.0); //Botton right
@@ -54,9 +11,38 @@ fn main() {
     // Camera vector
     let c = Vector(0.0,0.0,-1.0);
 
+    // Plain dimensions in pixels
     let width = 256;
     let height = 192;
 
+
+    
+    let sphere1 = Sphere{
+        center: Vector(0.0, 0.0, 2.0),
+        radius: 1.0,
+        color: (1.0,0.0,0.0) // Red
+    };
+
+    let sphere2 = Sphere{
+        center: Vector(-0.8, 0.5, 4.0),
+        radius: 2.0,
+        color: (0.0,1.0,0.0) // Green
+    };
+
+    let sphere3 = Sphere{
+        center: Vector(0.0,0.0,0.0),
+        radius: 0.2,
+        color: (0.0,0.0,1.0) // Blue
+    };
+
+    let sphere4 = Sphere{
+        center: Vector(-0.3, 0.0, 10.0),
+        radius: 7.0,
+        color: (0.7, 0.5, 0.0)
+    };
+
+    let spheres = vec![sphere1, sphere2, sphere3, sphere4];
+    
     let mut img = RgbImage::new(width, height);
 
     // Looping through each pixel in the 256x192 plain
@@ -68,10 +54,27 @@ fn main() {
             let t = x1.lerp(&x2, alpha);
             let b = x3.lerp(&x4, alpha);
             let p = t.lerp(&b, beta);
-            let o = p.sub(&c);
+            let d = p.sub(&c).norm();
             
-            let pixel = Rgb(o.to_rgb());
-            img.put_pixel(x, y, pixel);
+            let mut intersections = Vec::new();
+
+            for sphere in &spheres {
+                let t = intersection_test(&d, &sphere, &c);
+
+                if t > 0.0 {
+                    intersections.push((t, sphere));
+                }
+            }
+            if let Some ((_, closest_sphere)) = intersections.iter().min_by(|a,b| a.0.partial_cmp(&b.0).unwrap()) {
+                let color = closest_sphere.color;
+                img.put_pixel(x, y, Rgb([
+                    (color.0 * 255.0) as u8,
+                    (color.1 * 255.0) as u8,
+                    (color.2 * 255.0) as u8,
+                ]));
+            } else {
+                img.put_pixel(x, y, Rgb([0,0,0]));
+            }
         }
     }
 
