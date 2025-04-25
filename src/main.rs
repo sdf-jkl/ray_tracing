@@ -4,8 +4,8 @@ use ray_tracing::{Vector, Sphere, intersection_test};
 fn main() {
     // Image plain corners vectors
     let x1 = Vector(1.0, 0.75, 0.0); //Top right
-    let x2 = Vector(-1.0, 0.75, 0.0); //Botton right
-    let x3 = Vector(1.0, -0.75, 0.0); // Top left
+    let x2 = Vector(-1.0, 0.75, 0.0); //Top left
+    let x3 = Vector(1.0, -0.75, 0.0); // Bottom right
     let x4= Vector(-1.0, -0.75, 0.0); //Bottom left
 
     // Camera vector
@@ -18,30 +18,24 @@ fn main() {
 
     
     let sphere1 = Sphere{
-        center: Vector(0.0, 0.0, 2.0),
+        center: Vector(0.2, -0.2, 2.0),
         radius: 1.0,
         color: (1.0,0.0,0.0) // Red
     };
 
     let sphere2 = Sphere{
-        center: Vector(-0.8, 0.5, 4.0),
+        center: Vector(-0.9, 0.5, 4.0),
         radius: 2.0,
         color: (0.0,1.0,0.0) // Green
     };
 
     let sphere3 = Sphere{
-        center: Vector(0.0,0.0,0.0),
-        radius: 0.2,
+        center: Vector(-0.75, 0.6, 3.0),
+        radius: 1.2,
         color: (0.0,0.0,1.0) // Blue
     };
 
-    let sphere4 = Sphere{
-        center: Vector(-0.3, 0.0, 10.0),
-        radius: 7.0,
-        color: (0.7, 0.5, 0.0)
-    };
-
-    let spheres = vec![sphere1, sphere2, sphere3, sphere4];
+    let spheres = vec![sphere1, sphere2, sphere3];
     
     let mut img = RgbImage::new(width, height);
 
@@ -51,8 +45,8 @@ fn main() {
         for y in 0..height {
             let alpha = x as f32/(width - 1) as f32;
             let beta = y as f32/(height -1) as f32;
-            let t = x1.lerp(&x2, alpha);
-            let b = x3.lerp(&x4, alpha);
+            let t = x2.lerp(&x1, alpha);
+            let b = x4.lerp(&x3, alpha);
             let p = t.lerp(&b, beta);
             let d = p.sub(&c).norm();
             
