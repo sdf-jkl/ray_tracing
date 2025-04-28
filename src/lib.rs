@@ -47,17 +47,32 @@ impl Vector {
     }
 }
 
+#[derive(Clone)]
 pub struct Color(pub f32, pub f32, pub f32);
+
+impl Color {
+    pub fn prod(&self, color: &Color) -> Color {
+        Color(&self.0 * &color.0, &self.1 * &color.1, &self.2 * &color.2)
+    }
+
+    pub fn scale(&self, scalar: f32) -> Color {
+        Color(&self.0 * scalar, &self.1 * scalar, &self.2 * scalar)
+    }
+
+    pub fn add(&self, color: &Color) -> Color {
+        Color(&self.0 + &color.0, &self.1 + &color.1, &self.2 + &color.2)
+    }
+}
 
 pub struct Sphere {
     pub center: Vector,
     pub radius: f32,
     pub color: Color, // needs to be 0.0..1.0
-    pub material: Material
+    pub material: Material,
 }
 
-impl Sphere{
-    pub fn intersection_point(&self, origin: &Vector, d: &Vector, t: f32) -> Vector{
+impl Sphere {
+    pub fn intersection_point(&self, origin: &Vector, d: &Vector, t: f32) -> Vector {
         origin.add(&d.scale(t))
     }
     pub fn surf_normal(&self, p: &Vector) -> Vector {
@@ -105,7 +120,7 @@ pub struct Light {
 
 pub struct Material {
     pub ambient_k: Color,
-    pub diffuse_k: f32,
-    pub specular_k: f32,
-    pub shininess: i32
+    pub diffuse_k: Color,
+    pub specular_k: Color,
+    pub shininess: i32,
 }
