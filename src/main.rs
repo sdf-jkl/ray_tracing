@@ -47,7 +47,7 @@ fn main() {
             ambient_k: Color(0.0, 0.2, 0.1),
             diffuse_k: Color(0.6, 0.9, 0.7),
             specular_k: Color(0.8, 0.9, 0.7),
-            shininess: 20
+            shininess: 20,
         },
     };
 
@@ -80,7 +80,7 @@ fn main() {
             let t = x2.lerp(&x1, alpha);
             let b = x4.lerp(&x3, alpha);
             let p = t.lerp(&b, beta);
-            let d = p.sub(&c).norm();
+            let d = (p - c).norm();
 
             let mut intersections = Vec::new();
 
@@ -99,37 +99,29 @@ fn main() {
 
                 let surf_normal = closest_sphere.surf_normal(&p_inter);
 
-                let ambient_term = ambient_light.prod(&closest_sphere.material.ambient_k);
+                let ambient_term = ambient_light * closest_sphere.material.ambient_k;
 
                 let mut color = closest_sphere.color.clone();
 
-                color = color.add(&ambient_term);
+                color = color + ambient_term;
 
                 for light in &lights {
-                    let light_vector = light.location.sub(&p_inter).norm();
+                    let light_vector = (light.location - p_inter).norm();
 
-                    let dot_prod = surf_normal.dot_prod(&light_vector);
+                    let dot_prod = surf_normal * light_vector;
                     if dot_prod > 0.0 {
-                        let diffuse_comp = light
-                            .diffuse_int
-                            .prod(&closest_sphere.material.diffuse_k)
-                            .scale(dot_prod);
+                        let diffuse_comp =
+                            light.diffuse_int * closest_sphere.material.diffuse_k * dot_prod;
 
-                        let refl_vector = surf_normal.scale(2.0 * dot_prod).sub(&light_vector);
+                        let refl_vector = surf_normal * dot_prod * 2.0 - light_vector;
 
-                        let view_vector = c.sub(&p_inter).norm();
+                        let view_vector = (c - p_inter).norm();
 
-                        let specular_comp = closest_sphere
-                            .material
-                            .specular_k
-                            .prod(&light.specular_int)
-                            .scale(
-                                view_vector
-                                    .dot_prod(&refl_vector)
-                                    .powi(closest_sphere.material.shininess),
-                            );
+                        let specular_comp = closest_sphere.material.specular_k
+                            * light.specular_int
+                            * (view_vector * refl_vector).powi(closest_sphere.material.shininess);
 
-                        color = color.add(&diffuse_comp).add(&specular_comp)
+                        color = color + diffuse_comp + specular_comp
                     }
                 }
                 color = Color(
