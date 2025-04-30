@@ -1,5 +1,5 @@
-## 🚀 Motivation
-
+## 🚀 Motivation  
+![Spheres with lights](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/c0e265e777d78c8353c3860e3ef49cc71b9cf4ec/output.png)  
 I came across [@matklad](https://github.com/matklad)'s blog post where he mentions that one of the best ways to learn a programming language is by writing a **ray tracer** — so I decided to give it a shot.
 
 He links to [*Build Your Own 3D Renderer* by Avik Das](https://avikdas.com/build-your-own-raytracer/), a guide aimed at people who aren’t super confident with the math side of things. It’s a great resource for looking up the necessary formulas. I initially planned to just skim it… but ended up following the entire guide.
@@ -53,5 +53,34 @@ This one had 4 steps:
 
 **And the result was... this!**  
 ![This kinda looks like planetary alignment in front of the Sun](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/807a6c77d669f2bc1fe66177e5e8f45aa7d44398/output.png)
+
+---
+
+### 📚 Project 3: Rendering shaded spheres
+
+1. **Add lights to the world**  
+   Implemented a `Lights` struct with three fields: `location`, `diffuse_int`, and `specular_int`, and added some lights to the scene.
+
+2. **Add materials to spheres**  
+   Added a `material` field to the `Sphere` struct with multiple light-related properties.
+
+3. **Calculate the point of intersection and surface normal**  
+   Wrote two lines to calculate `p_intersect` and `surf_normal`.
+
+4. **Calculate the ambient term**  
+   Straightforward implementation.
+
+5. **Calculate the diffuse term**  
+   Involved a few additional formulas.
+
+6. **Calculate the specular term**  
+   Slightly larger formulas, but nothing too complex.
+
+7. **Clamp the resulting color**  
+   Combined all the lighting terms with the sphere color and clamped the result to the range [0, 1].
+
+
+   **And this was the result:**  
+   ![Spheres with lights](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/c0e265e777d78c8353c3860e3ef49cc71b9cf4ec/output.png)
 
 ---
