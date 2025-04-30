@@ -108,20 +108,43 @@ fn main() {
                 for light in &lights {
                     let light_vector = (light.location - p_inter).norm();
 
-                    let dot_prod = surf_normal * light_vector;
-                    if dot_prod > 0.0 {
-                        let diffuse_comp =
-                            light.diffuse_int * closest_sphere.material.diffuse_k * dot_prod;
+                    let shadow_origin = p_inter + surf_normal * 1e-4;
 
-                        let refl_vector = surf_normal * dot_prod * 2.0 - light_vector;
+                    let shadow_ray = light.location - shadow_origin;
 
-                        let view_vector = (c - p_inter).norm();
+                    let light_dist = (light.location - shadow_origin).len();
 
-                        let specular_comp = closest_sphere.material.specular_k
-                            * light.specular_int
-                            * (view_vector * refl_vector).powi(closest_sphere.material.shininess);
+                    let mut in_shadow = false;
 
-                        color = color + diffuse_comp + specular_comp
+                    for shadow_sphere in &spheres {
+                        if shadow_sphere.center == closest_sphere.center {
+                            continue;
+                        }
+
+                        let shadow_t = intersection_test(&shadow_ray, &shadow_sphere, &p_inter);
+
+                        if shadow_t > 0.0 && shadow_t < light_dist {
+                            in_shadow = true;
+                            break;
+                        }
+                    }
+                    if !in_shadow {
+                        let dot_prod = surf_normal * light_vector;
+                        if dot_prod > 0.0 {
+                            let diffuse_comp =
+                                light.diffuse_int * closest_sphere.material.diffuse_k * dot_prod;
+
+                            let refl_vector = surf_normal * dot_prod * 2.0 - light_vector;
+
+                            let view_vector = (c - p_inter).norm();
+
+                            let specular_comp = closest_sphere.material.specular_k
+                                * light.specular_int
+                                * (view_vector * refl_vector)
+                                    .powi(closest_sphere.material.shininess);
+
+                            color = color + diffuse_comp + specular_comp
+                        }
                     }
                 }
                 color = Color(

@@ -1,7 +1,10 @@
 use core::f32;
-use std::ops::{Add, Mul, Sub};
+use std::{
+    clone,
+    ops::{Add, Mul, Sub},
+};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vector(pub f32, pub f32, pub f32);
 
 // Implemeting functions for the Vector struct
@@ -148,6 +151,7 @@ impl Mul<f32> for &Color {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Sphere {
     pub center: Vector,
     pub radius: f32,
@@ -202,6 +206,7 @@ pub struct Light {
     pub specular_int: Color, // needs to be 0.0..1.0
 }
 
+#[derive(Clone, Copy)]
 pub struct Material {
     pub ambient_k: Color,
     pub diffuse_k: Color,
