@@ -1,28 +1,16 @@
 use image::{Rgb, RgbImage};
-use ray_tracing::{intersection_test, Color, Light, Material, Sphere, Vector};
+use ray_tracing::{intersection_test, Color, Frame, Light, Material, Scene, Sphere, Vector, ray_tracer};
 
 fn main() {
-    // Image plain corners vectors
-    let x1 = Vector(1.0, 0.75, 0.0); //Top right
-    let x2 = Vector(-1.0, 0.75, 0.0); //Top left
-    let x3 = Vector(1.0, -0.75, 0.0); // Bottom right
-    let x4 = Vector(-1.0, -0.75, 0.0); //Bottom left
-
-    // Camera vector
-    let c = Vector(0.0, 0.0, -1.0);
-
-    // Plain dimensions in pixels
-    let width = 256;
-    let height = 192;
-
     let sphere1 = Sphere {
         center: Vector(0.2, -0.5, 2.0),
         radius: 1.0,
         color: Color(0.7, 0.0, 0.0), // Red
         material: Material {
             ambient_k: Color(0.2, 0.2, 0.2),
-            diffuse_k: Color(0.5, 0.7, 0.6),
+            diffuse_k: Color(0.3, 0.2, 0.1),
             specular_k: Color(0.8, 0.7, 0.9),
+            reflectivity_k: Color(0.5, 0.7, 0.8),
             shininess: 20,
         },
     };
@@ -33,8 +21,9 @@ fn main() {
         color: Color(0.0, 0.2, 0.0), // Green
         material: Material {
             ambient_k: Color(0.2, 0.1, 0.1),
-            diffuse_k: Color(0.5, 0.8, 0.6),
+            diffuse_k: Color(0.3, 0.2, 0.1),
             specular_k: Color(0.5, 0.7, 0.6),
+            reflectivity_k: Color(0.5, 0.7, 0.8),
             shininess: 20,
         },
     };
@@ -47,13 +36,10 @@ fn main() {
             ambient_k: Color(0.0, 0.2, 0.1),
             diffuse_k: Color(0.6, 0.9, 0.7),
             specular_k: Color(0.8, 0.9, 0.7),
+            reflectivity_k: Color(0.3, 0.1, 0.2),
             shininess: 20,
         },
     };
-
-    let spheres = vec![sphere1, sphere2, sphere3];
-
-    let ambient_light = Color(0.1, 0.1, 0.1);
 
     let light1 = Light {
         location: Vector(-2.0, -1.0, 1.0),
@@ -67,104 +53,52 @@ fn main() {
         specular_int: Color(0.2, 0.1, 0.2),
     };
 
-    let lights = vec![light1, light2];
+    let scene = Scene {
+        frame: Frame {
+            x1: Vector(1.0, 0.75, 0.0),
+            x2: Vector(-1.0, 0.75, 0.0),
+            x3: Vector(1.0, -0.75, 0.0),
+            x4: Vector(-1.0, -0.75, 0.0),
+        },
+        camera: Vector(0.0, 0.0, -1.0),
+        width: 256,
+        height: 192,
+        ambient_light: Color(0.1, 0.1, 0.1),
+        lights: vec![light1, light2],
+        spheres: vec![sphere1, sphere2, sphere3],
+    };
 
-    let mut img = RgbImage::new(width, height);
+    let mut img = RgbImage::new(scene.width, scene.height);
 
     // Looping through each pixel in the 256x192 plain
     // and printing it's coordinates
-    for x in 0..width {
-        for y in 0..height {
-            let alpha = x as f32 / (width - 1) as f32;
-            let beta = y as f32 / (height - 1) as f32;
-            let t = x2.lerp(&x1, alpha);
-            let b = x4.lerp(&x3, alpha);
+
+    for x in 0..scene.width {
+        for y in 0..scene.height {
+            let alpha = x as f32 / (scene.width - 1) as f32;
+            let beta = y as f32 / (scene.height - 1) as f32;
+            let t = scene.frame.x2.lerp(&scene.frame.x1, alpha);
+            let b = scene.frame.x4.lerp(&scene.frame.x3, alpha);
             let p = t.lerp(&b, beta);
-            let d = (p - c).norm();
+            let direction_ray = (p - scene.camera).norm();
 
-            let mut intersections = Vec::new();
+            let mut color = ray_tracer(&scene, direction_ray);
 
-            for sphere in &spheres {
-                let t = intersection_test(&d, &sphere, &c);
+            color = Color(
+                color.0.clamp(0.0, 1.0),
+                color.1.clamp(0.0, 1.0),
+                color.2.clamp(0.0, 1.0),
+            );
 
-                if t > 0.0 {
-                    intersections.push((t, sphere));
-                }
-            }
-            if let Some((t, closest_sphere)) = intersections
-                .iter()
-                .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
-            {
-                let p_inter = closest_sphere.intersection_point(&c, &d, *t);
-
-                let surf_normal = closest_sphere.surf_normal(&p_inter);
-
-                let ambient_term = ambient_light * closest_sphere.material.ambient_k;
-
-                let mut color = closest_sphere.color.clone();
-
-                color = color + ambient_term;
-
-                for light in &lights {
-                    let light_vector = (light.location - p_inter).norm();
-
-                    let shadow_origin = p_inter + surf_normal * 1e-4;
-
-                    let shadow_ray = light.location - shadow_origin;
-
-                    let light_dist = (light.location - shadow_origin).len();
-
-                    let mut in_shadow = false;
-
-                    for shadow_sphere in &spheres {
-                        if shadow_sphere.center == closest_sphere.center {
-                            continue;
-                        }
-
-                        let shadow_t = intersection_test(&shadow_ray, &shadow_sphere, &p_inter);
-
-                        if shadow_t > 0.0 && shadow_t < light_dist {
-                            in_shadow = true;
-                            break;
-                        }
-                    }
-                    if !in_shadow {
-                        let dot_prod = surf_normal * light_vector;
-                        if dot_prod > 0.0 {
-                            let diffuse_comp =
-                                light.diffuse_int * closest_sphere.material.diffuse_k * dot_prod;
-
-                            let refl_vector = surf_normal * dot_prod * 2.0 - light_vector;
-
-                            let view_vector = (c - p_inter).norm();
-
-                            let specular_comp = closest_sphere.material.specular_k
-                                * light.specular_int
-                                * (view_vector * refl_vector)
-                                    .powi(closest_sphere.material.shininess);
-
-                            color = color + diffuse_comp + specular_comp
-                        }
-                    }
-                }
-                color = Color(
-                    color.0.clamp(0.0, 1.0),
-                    color.1.clamp(0.0, 1.0),
-                    color.2.clamp(0.0, 1.0),
-                );
-
-                img.put_pixel(
-                    x,
-                    y,
-                    Rgb([
-                        (color.0 * 255.0) as u8,
-                        (color.1 * 255.0) as u8,
-                        (color.2 * 255.0) as u8,
-                    ]),
-                );
-            } else {
-                img.put_pixel(x, y, Rgb([0, 0, 0]));
-            }
+            img.put_pixel(
+                x,
+                y,
+                Rgb([
+                    (color.0 * 255.0) as u8,
+                    (color.1 * 255.0) as u8,
+                    (color.2 * 255.0) as u8,
+                ]),
+            );
         }
     }
 

@@ -1,8 +1,5 @@
 use core::f32;
-use std::{
-    clone,
-    ops::{Add, Mul, Sub},
-};
+use std::ops::{Add, Mul, Sub};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vector(pub f32, pub f32, pub f32);
@@ -211,5 +208,92 @@ pub struct Material {
     pub ambient_k: Color,
     pub diffuse_k: Color,
     pub specular_k: Color,
+    pub reflectivity_k: Color, //if increse refl color decrease the same diffuse color
     pub shininess: i32,
+}
+
+pub struct Scene {
+    pub frame: Frame,
+    pub camera: Vector,
+    pub width: u32,
+    pub height: u32,
+    pub ambient_light: Color,
+    pub spheres: Vec<Sphere>,
+    pub lights: Vec<Light>,
+}
+
+pub struct Frame {
+    pub x1: Vector, //Top right
+    pub x2: Vector, //Top left
+    pub x3: Vector, // Bottom right
+    pub x4: Vector, //Bottom left
+}
+
+pub fn ray_tracer(scene: &Scene, d: Vector) -> Color {
+    let mut intersections = Vec::new();
+
+    for sphere in &scene.spheres {
+        let t = intersection_test(&d, &sphere, &scene.camera);
+
+        if t > 0.0 {
+            intersections.push((t, sphere));
+        }
+    }
+    if let Some((t, closest_sphere)) = intersections
+        .iter()
+        .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
+    {
+        let p_inter = closest_sphere.intersection_point(&scene.camera, &d, *t);
+
+        let surf_normal = closest_sphere.surf_normal(&p_inter);
+
+        let ambient_term = scene.ambient_light * closest_sphere.material.ambient_k;
+
+        let mut color = closest_sphere.color.clone();
+
+        color = color + ambient_term;
+
+        for light in &scene.lights {
+            let light_vector = (light.location - p_inter).norm();
+
+            let shadow_ray = light.location - p_inter;
+
+            let mut in_shadow = false;
+
+            for shadow_sphere in &scene.spheres {
+                if shadow_sphere.center == closest_sphere.center {
+                    continue;
+                }
+
+                let shadow_t = intersection_test(&shadow_ray, &shadow_sphere, &p_inter);
+
+                if shadow_t > 0.0 && shadow_t < 1.0 {
+                    in_shadow = true;
+                    break;
+                }
+            }
+            if !in_shadow {
+                let dot_prod = surf_normal * light_vector;
+                if dot_prod > 0.0 {
+                    let diffuse_comp =
+                        light.diffuse_int * closest_sphere.material.diffuse_k * dot_prod;
+
+                    let refl_vector = surf_normal * dot_prod * 2.0 - light_vector;
+
+                    let view_vector = (scene.camera - p_inter).norm();
+
+                    let specular_comp = closest_sphere.material.specular_k
+                        * light.specular_int
+                        * (view_vector * refl_vector).powi(closest_sphere.material.shininess);
+
+                    color = color + diffuse_comp + specular_comp;
+
+                    
+                }
+            }
+        }
+        return color;
+    } else {
+        Color(0.0, 0.0, 0.0)
+    }
 }
