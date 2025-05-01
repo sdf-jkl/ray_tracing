@@ -1,6 +1,6 @@
 ## 🚀 Motivation  
-![Spheres with lights](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/c0e265e777d78c8353c3860e3ef49cc71b9cf4ec/output.png)  
-I came across [@matklad](https://github.com/matklad)'s blog post where he mentions that one of the best ways to learn a programming language is by writing a **ray tracer** — so I decided to give it a shot.
+![Spheres with shadows](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/c5a73e01a9376324bc13ac20ce2b63460ecbf650/output.png)   
+I came across [@matklad](https://github.com/matklad)'s blog post where he mentions that one of the best ways to learn a programming language is by writing a **ray tracer** - so I decided to give it a shot.
 
 He links to [*Build Your Own 3D Renderer* by Avik Das](https://avikdas.com/build-your-own-raytracer/), a guide aimed at people who aren’t super confident with the math side of things. It’s a great resource for looking up the necessary formulas. I initially planned to just skim it… but ended up following the entire guide.
 
@@ -43,7 +43,7 @@ This one had 4 steps:
    Implemented a `Sphere` struct with two fields: `center` (a `Vector`) and `radius`.
 
 2. **Add color to the spheres**  
-   Added a third field — `color` (a tuple with three `f32` values).
+   Added a third field - `color` (a tuple with three `f32` values).
 
 3. **Perform ray-sphere intersection tests**  
    This was the challenging step. I got stuck for over an hour because of a bug in the `length` method I added to the `Vector` struct. Once fixed, I looped through all objects for each ray and picked the first one it intersected.
@@ -84,3 +84,17 @@ This one had 4 steps:
    ![Spheres with lights](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/c0e265e777d78c8353c3860e3ef49cc71b9cf4ec/output.png)
 
 ---
+
+### 📚 Project 4: Rendering shadows
+
+1. **Cast shadow rays at each intersection point**  
+   Casted `shadow_ray`s for every light from every intersection with a sphere
+
+2. **Determine if a sphere is in shadow from a light**  
+   Did another for loop through spheres to see if the `shadow_ray` interesects one and is casting a shadow
+
+   **Whew, this was short, but had some trouble with the second step:**  
+   ![Spheres with shadows](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/c5a73e01a9376324bc13ac20ce2b63460ecbf650/output.png)
+
+---
+
