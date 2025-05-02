@@ -1,5 +1,9 @@
 use core::f32;
-use std::ops::{Add, Mul, Sub};
+use image::{Rgb, RgbImage};
+use std::{
+    ops::{Add, Mul, Sub},
+    vec,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vector(pub f32, pub f32, pub f32);
@@ -229,6 +233,55 @@ pub struct Frame {
     pub x4: Vector, //Bottom left
 }
 
+pub enum SamplePattern {
+    Four,
+    Six,
+    Nine,
+}
+
+impl SamplePattern {
+    pub fn get_offsets(&self) -> Vec<(f32, f32)> {
+        match self {
+            SamplePattern::Four => vec![(0.0, 0.0), (0.0, 0.5), (0.5, 0.0), (0.5, 0.5)],
+            SamplePattern::Six => vec![
+                (0.0, 0.0),
+                (0.0, 0.33),
+                (0.0, 0.66),
+                (0.33, 0.0),
+                (0.33, 0.33),
+                (0.33, 0.66),
+            ],
+            SamplePattern::Nine => vec![
+                (0.0, 0.0),
+                (0.0, 0.33),
+                (0.0, 0.66),
+                (0.33, 0.0),
+                (0.33, 0.33),
+                (0.33, 0.66),
+                (0.66, 0.0),
+                (0.66, 0.33),
+                (0.66, 0.66),
+            ],
+        }
+    }
+}
+pub fn plain_point(x: u32, y: u32, scene: &Scene, offset: (f32, f32)) -> Vector {
+    let alpha = x as f32 / (scene.width - 1) as f32;
+    let delta_alpha = 1.0 / (scene.width as f32);
+    let beta = y as f32 / (scene.height - 1) as f32;
+    let delta_beta = 1.0 / (scene.height as f32);
+    let t = scene
+        .frame
+        .x2
+        .lerp(&scene.frame.x1, alpha + offset.0 * delta_alpha);
+    let b = scene
+        .frame
+        .x4
+        .lerp(&scene.frame.x3, alpha + offset.0 * delta_alpha);
+    let p = t.lerp(&b, beta + offset.1 * delta_beta);
+    return p;
+}
+
 pub fn ray_tracer(scene: &Scene, d: Vector, origin: &Vector, mut depth: u32) -> Color {
     if depth == 0 {
         return Color(0.0, 0.0, 0.0);
@@ -304,8 +357,6 @@ pub fn ray_tracer(scene: &Scene, d: Vector, origin: &Vector, mut depth: u32) -> 
                         * (view_vector * refl_vector).powi(closest_sphere.material.shininess);
 
                     color = color + diffuse_comp + specular_comp;
-
-                    
                 }
             }
         }
@@ -313,4 +364,44 @@ pub fn ray_tracer(scene: &Scene, d: Vector, origin: &Vector, mut depth: u32) -> 
     } else {
         Color(0.0, 0.0, 0.0)
     }
+}
+
+pub fn ray_tracing_with_ssaa(scene: &Scene, sample_size: SamplePattern) {
+    //Create image
+    let mut img = RgbImage::new(scene.width, scene.height);
+
+    // Looping through each pixel in the 256x192 plain
+    for x in 0..scene.width {
+        for y in 0..scene.height {
+            let mut color = Color(0.0, 0.0, 0.0);
+
+            for point in sample_size.get_offsets() {
+                let p = plain_point(x, y, &scene, point);
+
+                let direction_ray = (p - scene.camera).norm();
+
+                color = color + ray_tracer(&scene, direction_ray, &scene.camera, 3);
+            }
+
+            color = color * (1.0 / (sample_size.get_offsets().len() as f32));
+
+            color = Color(
+                color.0.clamp(0.0, 1.0),
+                color.1.clamp(0.0, 1.0),
+                color.2.clamp(0.0, 1.0),
+            );
+
+            img.put_pixel(
+                x,
+                y,
+                Rgb([
+                    (color.0 * 255.0) as u8,
+                    (color.1 * 255.0) as u8,
+                    (color.2 * 255.0) as u8,
+                ]),
+            );
+        }
+    }
+
+    img.save("output.png").expect("Failed to save image")
 }
