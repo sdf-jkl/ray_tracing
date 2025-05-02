@@ -229,11 +229,16 @@ pub struct Frame {
     pub x4: Vector, //Bottom left
 }
 
-pub fn ray_tracer(scene: &Scene, d: Vector) -> Color {
+pub fn ray_tracer(scene: &Scene, d: Vector, origin: &Vector, mut depth: u32) -> Color {
+    if depth == 0 {
+        return Color(0.0, 0.0, 0.0);
+    }
+    depth -= 1;
+
     let mut intersections = Vec::new();
 
     for sphere in &scene.spheres {
-        let t = intersection_test(&d, &sphere, &scene.camera);
+        let t = intersection_test(&d, &sphere, origin);
 
         if t > 0.0 {
             intersections.push((t, sphere));
@@ -243,15 +248,27 @@ pub fn ray_tracer(scene: &Scene, d: Vector) -> Color {
         .iter()
         .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
     {
-        let p_inter = closest_sphere.intersection_point(&scene.camera, &d, *t);
+        let p_inter = closest_sphere.intersection_point(origin, &d, *t);
 
         let surf_normal = closest_sphere.surf_normal(&p_inter);
+
+        let view_vector = d * -1.0;
+
+        let reflectance_vector = surf_normal * 2.0 * (surf_normal * view_vector) - view_vector;
+
+        let bias = surf_normal * 1e-4;
+
+        let reflect_origin = p_inter + bias;
+
+        let reflection = ray_tracer(scene, reflectance_vector, &reflect_origin, depth);
+
+        let reflection = reflection * closest_sphere.material.reflectivity_k;
 
         let ambient_term = scene.ambient_light * closest_sphere.material.ambient_k;
 
         let mut color = closest_sphere.color.clone();
 
-        color = color + ambient_term;
+        color = color + ambient_term + reflection;
 
         for light in &scene.lights {
             let light_vector = (light.location - p_inter).norm();

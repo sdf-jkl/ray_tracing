@@ -1,5 +1,5 @@
 use image::{Rgb, RgbImage};
-use ray_tracing::{intersection_test, Color, Frame, Light, Material, Scene, Sphere, Vector, ray_tracer};
+use ray_tracing::{Color, Frame, Light, Material, Scene, Sphere, Vector, ray_tracer};
 
 fn main() {
     let sphere1 = Sphere {
@@ -82,7 +82,7 @@ fn main() {
             let p = t.lerp(&b, beta);
             let direction_ray = (p - scene.camera).norm();
 
-            let mut color = ray_tracer(&scene, direction_ray);
+            let mut color = ray_tracer(&scene, direction_ray, &scene.camera, 3);
 
             color = Color(
                 color.0.clamp(0.0, 1.0),
