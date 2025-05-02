@@ -1,5 +1,6 @@
 ## 🚀 Motivation  
-![Spheres with shadows](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/c5a73e01a9376324bc13ac20ce2b63460ecbf650/output.png)   
+![High-res image](![image](https://github.com/user-attachments/assets/0179139e-7851-4d62-a1e5-fe03bb97109c)
+)   
 I came across [@matklad](https://github.com/matklad)'s blog post where he mentions that one of the best ways to learn a programming language is by writing a **ray tracer** - so I decided to give it a shot.
 
 He links to [*Build Your Own 3D Renderer* by Avik Das](https://avikdas.com/build-your-own-raytracer/), a guide aimed at people who aren’t super confident with the math side of things. It’s a great resource for looking up the necessary formulas. I initially planned to just skim it… but ended up following the entire guide.
@@ -97,4 +98,35 @@ This one had 4 steps:
    ![Spheres with shadows](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/c5a73e01a9376324bc13ac20ce2b63460ecbf650/output.png)
 
 ---
+
+### 📚 Project 5: Rendering shadows
+
+1. **Model the reflectivity of a material**  
+   Added reflectivity constant to the `material` struct
+
+2. **Determine if a sphere is in shadow from a light**  
+   Packed the color creating part into `ray_tracer` function that takes a `scene`, `ray`, `origin` vector and now added recursion `depth` and made the function recursive
+
+3. **Calculate the reflectance vector**
+  Did a little formula to calculate the reflectance vector
+
+5. **Recursively apply the ray tracing algorithm**
+   Ran the algorithm recursively for every ray coming from the camera
+
+   **The recursion part took a little effort, but not too crazy:**  
+   ![Spheres with reflections](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/1ed9cd44effeff63e60f14b9f4579b253870aed2/output.png)
+
+---
+
+### 📚 Project 6: Anti-aliasing
+
+1. **Calculate multiple points within one pixel boundary**  
+   Created a `SamplePattern` enum with three common anti-aliasing parameters and tuples including the logic to split the pixel into multiple parts
+
+2. **Average the results of the samples**  
+   Ran the `ray_tracer` for every pixel part, summed the resuling `Color` and divided it by the number of points to get the average 
+
+   **The spheres are now more smooth with 9 SSAA:**  
+   ![Spheres with SSAA](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/33f9f12ffc08fc6905d10c844a6a0367b7d9be70/output.png)
+
 
