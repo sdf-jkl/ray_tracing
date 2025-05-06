@@ -99,7 +99,7 @@ This one had 4 steps:
 
 ---
 
-### 📚 Project 5: Rendering shadows
+### 📚 Project 5: Rendering reflections
 
 1. **Model the reflectivity of a material**  
    Added reflectivity constant to the `material` struct
@@ -129,4 +129,24 @@ This one had 4 steps:
    **The spheres are now more smooth with 9 SSAA:**  
    ![Spheres with SSAA](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/33f9f12ffc08fc6905d10c844a6a0367b7d9be70/output.png)
 
+---
+
+## 🚀 Performance Optimization  
+Adding Anti-Aliasing was the last project in the guide, so I am free sailing now.
+
+The last three projects added a lot of iterations and recursive calls making the algorithm much slower now.
+
+But how much slower?
+
+At the original resolution of **256×192**, I didn’t notice any real difference - Rust is too fast.  
+To stress test the renderer, I increased the resolution to **2048×1536** (still a 4:3 aspect ratio) and ran a benchmark using [`hyperfine`](https://github.com/sharkdp/hyperfine):
+
+```bash
+hyperfine 'cargo run'  
+Benchmark 1: cargo run  
+  Time (mean ± σ):     27.503 s ±  0.183 s    [User: 13.766 s, System: 0.257 s]  
+  Range (min … max):   27.360 s … 27.995 s    10 runs
+```
+
+Need to fix this now...
 
