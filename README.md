@@ -1,6 +1,6 @@
 ## 🚀 Motivation  
-![High-res image](![image](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/2b27e1cff8134c0b1e15c6e502d20a3310c7149f/output.png)
-)   
+![High-res image](https://raw.githubusercontent.com/sdf-jkl/ray_tracing/2b27e1cff8134c0b1e15c6e502d20a3310c7149f/output.png)
+
 I came across [@matklad](https://github.com/matklad)'s blog post where he mentions that one of the best ways to learn a programming language is by writing a **ray tracer** - so I decided to give it a shot.
 
 He links to [*Build Your Own 3D Renderer* by Avik Das](https://avikdas.com/build-your-own-raytracer/), a guide aimed at people who aren’t super confident with the math side of things. It’s a great resource for looking up the necessary formulas. I initially planned to just skim it… but ended up following the entire guide.
