@@ -147,6 +147,24 @@ Benchmark 1: cargo run
   Time (mean ± σ):     27.503 s ±  0.183 s    [User: 13.766 s, System: 0.257 s]  
   Range (min … max):   27.360 s … 27.995 s    10 runs
 ```
+That is 27ish seconds on average.
 
-Need to fix this now...
+So in this step I was looking at multi-threading libraries and decided to go with [`rayon`](https://github.com/rayon-rs/rayon).
 
+The issue that I had was that I originally created an image buffer and was iteratevely inserting each pixel in it.  
+This didn't work with multi-threading due to data race issues. Can't update the same image at the same time...  
+So instead I created a `pixels: Vec<(u32, u32, Color)>` that I concurrently populated with coordinates and color values.  
+Then I pushed them into the image buffer and Voila!
+
+But what are the results?  
+Ta-da!
+```bash
+hyperfine 'cargo run'
+Benchmark 1: cargo run
+  Time (mean ± σ):      3.532 s ±  0.122 s    [User: 36.679 s, System: 0.132 s]
+  Range (min … max):    3.382 s …  3.820 s    10 runs
+```
+We dropped from 27.5 to 3.5 seconds on average. That is almost 8 times better. Because I have 8 cores, I wanted to say... But I actually have 12 on the machine I made the benchmark.
+But still good. 
+
+Wanted to finish the performance-optimization part for closure, finally finishing this project to be able to fully focus on something else.
