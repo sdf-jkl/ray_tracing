@@ -1,6 +1,9 @@
-use rayon;
 use core::f32;
 use image::{Rgb, RgbImage};
+use rayon::{
+    self,
+    iter::{IntoParallelIterator, ParallelIterator},
+};
 use std::{
     ops::{Add, Mul, Sub},
     vec,
@@ -243,17 +246,25 @@ pub enum SamplePattern {
 impl SamplePattern {
     pub fn get_offsets(&self) -> Vec<(f32, f32)> {
         match self {
-            SamplePattern::Four => vec![(-0.25, -0.25), (0.25, -0.25),
-            (-0.25, 0.25), (0.25, 0.25),
-            ],
+            SamplePattern::Four => vec![(-0.25, -0.25), (0.25, -0.25), (-0.25, 0.25), (0.25, 0.25)],
             SamplePattern::Six => vec![
-                (-0.33, -0.33), (0.0, -0.33), (0.33, -0.33),
-                (-0.33, 0.0), (0.0, 0.0), (0.33, 0.0),
+                (-0.33, -0.33),
+                (0.0, -0.33),
+                (0.33, -0.33),
+                (-0.33, 0.0),
+                (0.0, 0.0),
+                (0.33, 0.0),
             ],
             SamplePattern::Nine => vec![
-                (-0.33, -0.33), (0.0, -0.33), (0.33, -0.33),
-                (-0.33, 0.0), (0.0, 0.0), (0.33, 0.0),
-                (-0.33, 0.33), (0.0, 0.33), (0.33, 0.33),
+                (-0.33, -0.33),
+                (0.0, -0.33),
+                (0.33, -0.33),
+                (-0.33, 0.0),
+                (0.0, 0.0),
+                (0.33, 0.0),
+                (-0.33, 0.33),
+                (0.0, 0.33),
+                (0.33, 0.33),
             ],
         }
     }
@@ -271,8 +282,7 @@ pub fn plain_point(x: u32, y: u32, scene: &Scene, offset: (f32, f32)) -> Vector 
         .frame
         .x4
         .lerp(&scene.frame.x3, alpha + offset.0 * delta_alpha);
-    let p = t.lerp(&b, beta + offset.1 * delta_beta);
-    return p;
+    t.lerp(&b, beta + offset.1 * delta_beta)
 }
 
 pub fn ray_tracer(scene: &Scene, d: Vector, origin: &Vector, mut depth: u32) -> Color {
@@ -284,7 +294,7 @@ pub fn ray_tracer(scene: &Scene, d: Vector, origin: &Vector, mut depth: u32) -> 
     let mut intersections = Vec::new();
 
     for sphere in &scene.spheres {
-        let t = intersection_test(&d, &sphere, origin);
+        let t = intersection_test(&d, sphere, origin);
 
         if t > 0.0 {
             intersections.push((t, sphere));
@@ -312,7 +322,7 @@ pub fn ray_tracer(scene: &Scene, d: Vector, origin: &Vector, mut depth: u32) -> 
 
         let ambient_term = scene.ambient_light * closest_sphere.material.ambient_k;
 
-        let mut color = closest_sphere.color.clone();
+        let mut color = closest_sphere.color;
 
         color = color + ambient_term + reflection;
 
@@ -328,7 +338,7 @@ pub fn ray_tracer(scene: &Scene, d: Vector, origin: &Vector, mut depth: u32) -> 
                     continue;
                 }
 
-                let shadow_t = intersection_test(&shadow_ray, &shadow_sphere, &p_inter);
+                let shadow_t = intersection_test(&shadow_ray, shadow_sphere, &p_inter);
 
                 if shadow_t > 0.0 && shadow_t < 1.0 {
                     in_shadow = true;
@@ -353,48 +363,59 @@ pub fn ray_tracer(scene: &Scene, d: Vector, origin: &Vector, mut depth: u32) -> 
                 }
             }
         }
-        return color;
+        color
     } else {
         Color(0.0, 0.0, 0.0)
     }
 }
 
 pub fn ray_tracing_with_ssaa(scene: &Scene, sample_size: SamplePattern) {
-    //Create image
+    let offsets = sample_size.get_offsets();
+    let num_samples = offsets.len() as f32;
+
+    // Creating a vector of all pixels
+    let pixels: Vec<(u32, u32, Color)> = (0..scene.width)
+        .into_par_iter()
+        .flat_map(|x| {
+            (0..scene.height).into_par_iter().map({
+                let value = offsets.clone();
+                move |y| {
+                    let mut color = Color(0.0, 0.0, 0.0);
+
+                    for point in &value {
+                        let p = plain_point(x, y, scene, *point);
+                        let direction_ray = (p - scene.camera).norm();
+                        color = color + ray_tracer(scene, direction_ray, &scene.camera, 3);
+                    }
+
+                    color = color * (1.0 / num_samples);
+                    color = Color(
+                        color.0.clamp(0.0, 1.0),
+                        color.1.clamp(0.0, 1.0),
+                        color.2.clamp(0.0, 1.0),
+                    );
+
+                    (x, y, color)
+                }
+            })
+        })
+        .collect();
+
+    // Create image buffer
     let mut img = RgbImage::new(scene.width, scene.height);
 
-    // Looping through each pixel in the 256x192 plain
-    for x in 0..scene.width {
-        for y in 0..scene.height {
-            let mut color = Color(0.0, 0.0, 0.0);
-
-            for point in sample_size.get_offsets() {
-                let p = plain_point(x, y, &scene, point);
-
-                let direction_ray = (p - scene.camera).norm();
-
-                color = color + ray_tracer(&scene, direction_ray, &scene.camera, 3);
-            }
-
-            color = color * (1.0 / (sample_size.get_offsets().len() as f32));
-
-            color = Color(
-                color.0.clamp(0.0, 1.0),
-                color.1.clamp(0.0, 1.0),
-                color.2.clamp(0.0, 1.0),
-            );
-
-            img.put_pixel(
-                x,
-                y,
-                Rgb([
-                    (color.0 * 255.0) as u8,
-                    (color.1 * 255.0) as u8,
-                    (color.2 * 255.0) as u8,
-                ]),
-            );
-        }
+    // Write pixels into image buffer
+    for (x, y, color) in pixels {
+        img.put_pixel(
+            x,
+            y,
+            Rgb([
+                (color.0 * 255.0) as u8,
+                (color.1 * 255.0) as u8,
+                (color.2 * 255.0) as u8,
+            ]),
+        );
     }
 
-    img.save("output.png").expect("Failed to save image")
+    img.save("output.png").expect("Failed to save image");
 }
